@@ -1,0 +1,167 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #07090e;
+    --bg-secondary: #0d121c;
+    --bg-card: #131b2a;
+    --border-color: rgba(255, 255, 255, 0.08);
+    --accent-emerald: #10b981;
+    --accent-amber: #f59e0b;
+    --accent-rose: #f43f5e;
+    --accent-cyan: #06b6d4;
+    --accent-indigo: #6366f1;
+  }
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #07090e;
+  color: #f1f5f9;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+/* Futuristic glassmorphic backdrop */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-hover:hover {
+  background: rgba(30, 41, 59, 0.82);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.35);
+}
+
+.glow-amber {
+  box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.35);
+}
+
+.glow-rose {
+  box-shadow: 0 0 25px -5px rgba(244, 63, 94, 0.35);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.35);
+}
+
+.glow-avatar {
+  filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.6));
+}
+
+@keyframes pulseSlow {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.05); opacity: 1; }
+}
+
+.animate-pulse-slow {
+  animation: pulseSlow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* --- MAGICAL FAIRY & WAND ANIMATIONS --- */
+
+@keyframes fairyHover {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(0.8deg); }
+}
+
+.animate-fairy-hover {
+  animation: fairyHover 2.6s ease-in-out infinite;
+}
+
+@keyframes wingFlutterLeft {
+  0%, 100% { transform: scaleX(1) skewY(0deg); opacity: 0.85; }
+  50% { transform: scaleX(0.75) skewY(-6deg); opacity: 0.65; }
+}
+
+@keyframes wingFlutterRight {
+  0%, 100% { transform: scaleX(1) skewY(0deg); opacity: 0.85; }
+  50% { transform: scaleX(0.75) skewY(6deg); opacity: 0.65; }
+}
+
+.animate-wing-left {
+  transform-origin: right center;
+  animation: wingFlutterLeft 0.7s ease-in-out infinite;
+}
+
+.animate-wing-right {
+  transform-origin: left center;
+  animation: wingFlutterRight 0.7s ease-in-out infinite;
+}
+
+@keyframes wandStarSparkle {
+  0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.85)); }
+  50% { transform: scale(1.22) rotate(45deg); filter: drop-shadow(0 0 14px rgba(238, 242, 255, 1)); }
+}
+
+.animate-wand-star {
+  animation: wandStarSparkle 1.8s ease-in-out infinite;
+}
+
+@keyframes wandTwirlMotion {
+  0% { transform: rotate(0deg) translate(0, 0); }
+  25% { transform: rotate(-12deg) translate(-1px, -2px); }
+  50% { transform: rotate(10deg) translate(1px, -3px); }
+  75% { transform: rotate(-6deg) translate(0px, -1px); }
+  100% { transform: rotate(0deg) translate(0, 0); }
+}
+
+.animate-wand-twirl {
+  transform-origin: 10px 30px;
+  animation: wandTwirlMotion 1.4s ease-in-out infinite;
+}
+
+@keyframes lightningPulse {
+  0%, 100% { stroke-dashoffset: 0; opacity: 0.4; }
+  50% { stroke-dashoffset: 12; opacity: 0.95; }
+}
+
+.animate-lightning {
+  stroke-dasharray: 4 2;
+  animation: lightningPulse 0.9s linear infinite;
+}
+
+@keyframes mouthSpeechCycle {
+  0%, 100% { d: path("M 17 25 Q 20 27 23 25"); }
+  25% { d: path("M 17 24 Q 20 29 23 24 Q 20 22 17 24"); }
+  50% { d: path("M 18 24.5 Q 20 27.5 22 24.5"); }
+  75% { d: path("M 17 24 Q 20 30 23 24 Q 20 21 17 24"); }
+}
+
+.animate-mouth-speech {
+  animation: mouthSpeechCycle 0.28s ease-in-out infinite;
+}
+
+@keyframes sparkleDriftOut {
+  0% { opacity: 0; transform: scale(0.4) translate(0, 0); }
+  40% { opacity: 1; transform: scale(1.1) translate(4px, -6px); }
+  100% { opacity: 0; transform: scale(0.2) translate(12px, -14px); }
+}
+
+.animate-sparkle-drift {
+  animation: sparkleDriftOut 1.5s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}

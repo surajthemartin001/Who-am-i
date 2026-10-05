@@ -1,0 +1,6 @@
+{
+  "name": "WHO AM I?",
+  "description": "Intelligent personal development navigation system. Stay on your path. Become who you decided to become.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
