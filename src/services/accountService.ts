@@ -1,5 +1,6 @@
 import {
   UserProfile,
+  IntensityMode,
   Goal,
   TrackMetrics,
   IntensityLockState,
@@ -155,7 +156,7 @@ export function createNewAccount(params: {
   dailyHours: number;
   weeklyHours: number;
   preferredStudyTimes: string;
-  desiredIntensity: 'TURTLE' | 'RABBIT' | 'CHEETAH';
+  desiredIntensity: IntensityMode;
   provider: 'google' | 'email_otp' | 'mobile_otp' | 'demo';
 }): UserAccount {
   const accounts = getAllAccounts();
@@ -230,7 +231,9 @@ export function createNewAccount(params: {
     mode: params.desiredIntensity,
     lockedAt: new Date().toISOString(),
     lockedUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    durationDays: 30,
     daysRemaining: 30,
+    isLocked: true,
   };
 
   // Save isolated user dataset

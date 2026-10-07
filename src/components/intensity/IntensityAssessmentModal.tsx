@@ -204,7 +204,7 @@ export const IntensityAssessmentModal: React.FC<IntensityAssessmentModalProps> =
         {isEvaluating && (
           <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-4 text-center">
             <div className="relative">
-              <LyraAvatar mood="Thinking" size="hero" state="thinking" />
+              <LyraAvatar mood="Focused" size="hero" state="thinking" />
               <div className="absolute -inset-4 rounded-full border border-indigo-500/40 animate-ping pointer-events-none" />
             </div>
             <div className="text-base font-bold text-white">Lyra is evaluating your responses...</div>

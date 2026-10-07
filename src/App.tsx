@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   UserProfile,
+  IntensityMode,
   IntensityLockState,
   TrackMetrics,
   Goal,
@@ -314,13 +315,15 @@ export default function App() {
     });
   };
 
-  const handleUpdateMode = (newMode: any) => {
+  const handleUpdateMode = (newMode: IntensityMode, durationDays: 7 | 30 = 30) => {
     setProfile((prev) => ({ ...prev, desiredIntensity: newMode }));
     setLockState({
       mode: newMode,
       lockedAt: new Date().toISOString(),
-      lockedUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      daysRemaining: 30,
+      lockedUntil: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString(),
+      durationDays,
+      daysRemaining: durationDays,
+      isLocked: true,
     });
   };
 
@@ -758,6 +761,8 @@ export default function App() {
               <IntensityModeCard
                 currentMode={profile.desiredIntensity}
                 lockState={lockState}
+                profile={profile}
+                goals={goals}
                 onUpdateMode={handleUpdateMode}
               />
 

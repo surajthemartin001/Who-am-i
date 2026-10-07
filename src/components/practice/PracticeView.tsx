@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
-import { QuestionItem, RevisionItem, IntensityMode } from '../../types';
+import React, { useState, useEffect } from 'react';
+import { QuestionItem, RevisionItem, IntensityMode, QuestionPack, UserProfile } from '../../types';
 import { executeLyraTask } from '../../services/lyraService';
+import { getSavedQuestionPacks, saveQuestionPack } from '../../services/questionEngineService';
+import { ImportQuestionEngineModal } from '../questionEngine/ImportQuestionEngineModal';
+import { UnifiedPracticeSession } from '../questionEngine/UnifiedPracticeSession';
 import {
   FileQuestion,
   BookmarkCheck,
@@ -14,12 +17,17 @@ import {
   Layers,
   Award,
   Zap,
+  Play,
+  Upload,
+  Clock,
+  Plus,
 } from 'lucide-react';
 
 interface PracticeViewProps {
   questions: QuestionItem[];
   revisions: RevisionItem[];
   intensityMode: IntensityMode;
+  profile?: UserProfile;
   onToggleSaveQuestion: (questionId: string) => void;
   onRecordAttempt: (questionId: string, isCorrect: boolean) => void;
   onAddGeneratedQuestions: (newQuestions: QuestionItem[]) => void;
@@ -29,15 +37,86 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
   questions,
   revisions,
   intensityMode,
+  profile,
   onToggleSaveQuestion,
   onRecordAttempt,
   onAddGeneratedQuestions,
 }) => {
-  const [activeTab, setActiveTab] = useState<'practice' | 'bank' | 'revisions' | 'pyq'>('practice');
+  const [activeTab, setActiveTab] = useState<'practice' | 'bank' | 'revisions' | 'pyq' | 'packs'>('practice');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Unified Engine Modal State
+  const [isEngineModalOpen, setIsEngineModalOpen] = useState(false);
+
+  // Active Running Pack State
+  const [activeRunningPack, setActiveRunningPack] = useState<{
+    pack: QuestionPack;
+    questions: QuestionItem[];
+  } | null>(null);
+
+  // Reusable Question Packs
+  const [savedPacks, setSavedPacks] = useState<QuestionPack[]>(() => {
+    const fromStorage = getSavedQuestionPacks();
+    if (fromStorage.length > 0) return fromStorage;
+
+    // Seed realistic default packs
+    const defaultPacks: QuestionPack[] = [
+      {
+        id: 'pack-quick-20',
+        title: '20-Question Quick Velocity Drill',
+        description: 'Rapid multi-topic practice to test cognitive retrieval under a 20-minute countdown.',
+        field: 'Software Development & Architecture',
+        topics: ['Distributed Systems', 'Data Structures', 'Database Internals'],
+        questionCount: 20,
+        questionIds: [],
+        difficulty: 'Hard',
+        sourceMix: 'mixed',
+        mode: 'quiz',
+        timeLimitMinutes: 20,
+        createdAt: new Date().toISOString(),
+        completedAttempts: 3,
+        averageScore: 85,
+      },
+      {
+        id: 'pack-chapter-50',
+        title: '50-Question Chapter Mastery Pack',
+        description: 'Comprehensive chapter drill testing theoretical depth and proof-of-work scenarios.',
+        field: 'Cybersecurity & Ethical Hacking',
+        topics: ['Web Application Security', 'OWASP Top 10', 'Injection Vulnerabilities'],
+        questionCount: 50,
+        questionIds: [],
+        difficulty: 'Hard',
+        sourceMix: 'mixed',
+        mode: 'practice',
+        timeLimitMinutes: 60,
+        createdAt: new Date().toISOString(),
+        completedAttempts: 1,
+        averageScore: 78,
+      },
+      {
+        id: 'pack-pyq-full',
+        title: 'Official Previous Year Paper (PYQ) Pack',
+        description: 'Curated archive of competitive technical and architectural benchmark questions.',
+        field: 'Software Development & Architecture',
+        topics: ['Core Algorithmic Foundations', 'System Architecture'],
+        questionCount: 30,
+        questionIds: [],
+        difficulty: 'Extreme',
+        sourceMix: 'imported_only',
+        mode: 'exam',
+        timeLimitMinutes: 45,
+        createdAt: new Date().toISOString(),
+        completedAttempts: 2,
+        averageScore: 72,
+      },
+    ];
+
+    defaultPacks.forEach((p) => saveQuestionPack(p));
+    return defaultPacks;
+  });
 
   // Daily target based on intensity mode
   const targetQuestions = intensityMode === 'CHEETAH' ? 50 : intensityMode === 'RABBIT' ? 35 : 25;
@@ -107,47 +186,68 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
           </div>
         </div>
 
-        {/* Practice Modes Navigation */}
-        <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-800 text-xs">
+        {/* Practice Modes Navigation & Unified Engine Trigger */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-800 text-xs">
+            <button
+              onClick={() => setActiveTab('practice')}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all ${
+                activeTab === 'practice'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Practice Lab
+            </button>
+            <button
+              onClick={() => setActiveTab('packs')}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all flex items-center gap-1.5 ${
+                activeTab === 'packs'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Layers size={13} /> Question Packs ({savedPacks.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('bank')}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all flex items-center gap-1.5 ${
+                activeTab === 'bank'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <BookmarkCheck size={13} /> Saved ({savedQuestions.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('pyq')}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all flex items-center gap-1.5 ${
+                activeTab === 'pyq'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Award size={13} /> PYQs ({pyqQuestions.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('revisions')}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all flex items-center gap-1.5 ${
+                activeTab === 'revisions'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <RotateCcw size={13} /> Revision ({revisions.length})
+            </button>
+          </div>
+
           <button
-            onClick={() => setActiveTab('practice')}
-            className={`px-3.5 py-1.5 rounded-xl font-medium transition-all ${
-              activeTab === 'practice'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
+            onClick={() => setIsEngineModalOpen(true)}
+            className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-500 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-1.5 shrink-0"
+            title="Open Unified Import & Custom Question Engine"
           >
-            Practice Lab
-          </button>
-          <button
-            onClick={() => setActiveTab('bank')}
-            className={`px-3.5 py-1.5 rounded-xl font-medium transition-all flex items-center gap-1.5 ${
-              activeTab === 'bank'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <BookmarkCheck size={13} /> Saved Bank ({savedQuestions.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('pyq')}
-            className={`px-3.5 py-1.5 rounded-xl font-medium transition-all flex items-center gap-1.5 ${
-              activeTab === 'pyq'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Award size={13} /> PYQ Center ({pyqQuestions.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('revisions')}
-            className={`px-3.5 py-1.5 rounded-xl font-medium transition-all flex items-center gap-1.5 ${
-              activeTab === 'revisions'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <RotateCcw size={13} /> Smart Revision ({revisions.length})
+            <Sparkles size={14} className="text-amber-300" />
+            <span>Import & Custom Engine</span>
           </button>
         </div>
       </div>

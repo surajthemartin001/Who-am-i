@@ -171,15 +171,45 @@ export interface WeekPlanDay {
   tasks: DailyPlanTask[];
 }
 
+export type QuestionType =
+  | 'mcq'
+  | 'multiple_answer'
+  | 'true_false'
+  | 'short_answer'
+  | 'long_answer'
+  | 'numerical'
+  | 'coding'
+  | 'assertion_reasoning'
+  | 'conceptual'
+  | 'pyq';
+
+export interface QuestionSourceMetadata {
+  sourceType: 'pdf' | 'image' | 'text' | 'website' | 'question_bank' | 'ai_generated' | 'hybrid';
+  sourceName: string;
+  pageNumber?: number;
+  originalQuestionNumber?: string;
+  sourceSection?: string;
+  sourceUrl?: string;
+  extractedAt: string;
+  isFlaggedAmbiguous?: boolean;
+  ambiguityReason?: string;
+  originalSnippet?: string;
+}
+
 export interface QuestionItem {
   id: string;
   question: string;
-  type: 'mcq' | 'conceptual' | 'coding' | 'numerical' | 'pyq';
+  type: QuestionType;
   options?: string[];
   correctAnswer: string;
   explanation: string;
+  field?: string;
+  subject?: string;
+  chapter?: string;
   topic: string;
+  subtopic?: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
+  sourceMetadata?: QuestionSourceMetadata;
   isPyq?: boolean;
   pyqYear?: string;
   savedForRevision?: boolean;
@@ -187,6 +217,46 @@ export interface QuestionItem {
   attemptsCount?: number;
   lastResult?: 'correct' | 'incorrect';
   userNotes?: string;
+  whyOthersWrong?: string[];
+  deeperConcept?: string;
+  packId?: string;
+}
+
+export interface QuestionPack {
+  id: string;
+  title: string;
+  description: string;
+  field: string;
+  subject?: string;
+  chapter?: string;
+  topics: string[];
+  questionCount: number;
+  questionIds: string[];
+  difficulty: 'Beginner' | 'Intermediate' | 'Hard' | 'Extreme' | 'Mixed';
+  sourceMix: 'imported_only' | 'ai_only' | 'mixed';
+  mode: 'practice' | 'quiz' | 'exam' | 'revision' | 'practice_sheet';
+  timeLimitMinutes?: number;
+  createdAt: string;
+  completedAttempts: number;
+  averageScore?: number;
+}
+
+export interface QuestionEngineConfig {
+  field: string;
+  subject?: string;
+  chapter?: string;
+  topics: string[];
+  questionCount: number;
+  types: QuestionType[];
+  difficulty: 'Beginner' | 'Intermediate' | 'Hard' | 'Extreme' | 'Mixed';
+  timeLimitMinutes: number;
+  isRandom: boolean;
+  sourceMix: 'imported_only' | 'ai_only' | 'mixed';
+  selectedSourceId?: string;
+  excludeAttempted: boolean;
+  excludeRepeated: boolean;
+  mode: 'practice' | 'quiz' | 'exam' | 'revision' | 'practice_sheet';
+  promptOverride?: string;
 }
 
 export interface RevisionItem {
