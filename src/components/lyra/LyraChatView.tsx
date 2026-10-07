@@ -111,11 +111,22 @@ export const LyraChatView: React.FC<LyraChatViewProps> = ({
     }
   }, [settings.language]);
 
+  const chatSilenceTimerRef = useRef<any>(null);
+  const liveSpokenAccumulatorRef = useRef<string>('');
+  const isChatListeningRef = useRef<boolean>(false);
+
   const toggleListening = () => {
-    if (fairyState === 'listening') {
+    if (isChatListeningRef.current) {
+      isChatListeningRef.current = false;
       try {
         recognitionRef.current?.stop();
       } catch {}
+      clearTimeout(chatSilenceTimerRef.current);
+      if (liveSpokenAccumulatorRef.current.trim()) {
+        const text = liveSpokenAccumulatorRef.current.trim();
+        liveSpokenAccumulatorRef.current = '';
+        handleSend(text);
+      }
       setFairyState('idle');
     } else {
       stopLyraSpeech();
@@ -123,33 +134,72 @@ export const LyraChatView: React.FC<LyraChatViewProps> = ({
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (SpeechRecognition) {
           const recog = new SpeechRecognition();
-          recog.continuous = false;
-          recog.interimResults = false;
-          recog.lang = settings.language === 'hindi' ? 'hi-IN' : 'en-US';
+          recog.continuous = true;
+          recog.interimResults = true;
+          recog.lang = settings.language === 'hindi' || settings.language === 'hinglish' ? 'hi-IN' : 'en-US';
+
+          liveSpokenAccumulatorRef.current = '';
+          isChatListeningRef.current = true;
 
           recog.onresult = (event: any) => {
-            const transcript = event.results[0][0].transcript;
-            if (transcript) {
-              setInputValue(transcript);
-              handleSend(transcript);
+            let interim = '';
+            let finalPhrase = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+              if (event.results[i].isFinal) {
+                finalPhrase += event.results[i][0].transcript;
+              } else {
+                interim += event.results[i][0].transcript;
+              }
             }
-            setFairyState('idle');
+            const currentSaid = (finalPhrase || interim).trim();
+            if (currentSaid) {
+              setInputValue(currentSaid);
+              liveSpokenAccumulatorRef.current = currentSaid;
+
+              clearTimeout(chatSilenceTimerRef.current);
+              chatSilenceTimerRef.current = setTimeout(() => {
+                if (liveSpokenAccumulatorRef.current.trim()) {
+                  const toSend = liveSpokenAccumulatorRef.current.trim();
+                  liveSpokenAccumulatorRef.current = '';
+                  isChatListeningRef.current = false;
+                  try {
+                    recog.stop();
+                  } catch {}
+                  setFairyState('idle');
+                  handleSend(toSend);
+                }
+              }, 1400);
+            }
           };
 
           recog.onerror = () => {
+            isChatListeningRef.current = false;
             setFairyState('idle');
           };
 
           recog.onend = () => {
-            setFairyState('idle');
+            if (isChatListeningRef.current && liveSpokenAccumulatorRef.current.trim()) {
+              const toSend = liveSpokenAccumulatorRef.current.trim();
+              liveSpokenAccumulatorRef.current = '';
+              isChatListeningRef.current = false;
+              setFairyState('idle');
+              handleSend(toSend);
+            } else {
+              isChatListeningRef.current = false;
+              setFairyState('idle');
+            }
           };
 
           recognitionRef.current = recog;
           recog.start();
           setFairyState('listening');
+        } else {
+          setActionSuccessNotice('Voice recognition is not supported in this browser. You can type your command directly below!');
+          setTimeout(() => setActionSuccessNotice(null), 4500);
         }
       } catch (err) {
         console.warn('Speech recognition start failed:', err);
+        isChatListeningRef.current = false;
         setFairyState('idle');
       }
     }
@@ -508,6 +558,31 @@ export const LyraChatView: React.FC<LyraChatViewProps> = ({
           </button>
         ))}
       </div>
+
+      {/* Live Voice Listening Feedback Banner */}
+      {fairyState === 'listening' && (
+        <div className="px-4 py-2 bg-gradient-to-r from-indigo-950 via-purple-950 to-slate-950 border-t border-indigo-500/30 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 text-indigo-300 font-medium">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
+            <span className="font-semibold text-white">🎙️ सुन रही हूँ...</span>
+            <span className="text-slate-400 text-[11px] truncate max-w-xs sm:max-w-md">
+              {inputValue ? `"${inputValue}"` : 'बोलिए, आपकी आवाज़ रिकॉर्ड हो रही है...'}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (inputValue.trim()) {
+                handleSend(inputValue.trim());
+              }
+              toggleListening();
+            }}
+            className="px-2.5 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] shrink-0 shadow-md"
+          >
+            भेजें (Done)
+          </button>
+        </div>
+      )}
 
       {/* Bottom Input Console */}
       <div className="p-3.5 border-t border-slate-800/80 bg-slate-900/60">

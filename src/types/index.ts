@@ -293,7 +293,7 @@ export interface ExternalTTSConfig {
 export interface LyraSettings {
   mood: LyraMood;
   personality: 'Warm & Encouraging' | 'Rigorous & Precise' | 'Philosophical & Direct' | 'Dynamic Companion';
-  voice: 'Kore' | 'Puck' | 'Zephyr' | 'Fenrir' | 'Charon' | 'BrowserDefault';
+  voice: 'HarmonicHybrid' | 'Kore' | 'Puck' | 'Zephyr' | 'Fenrir' | 'Charon' | 'BrowserDefault';
   language: 'hindi' | 'english' | 'hinglish' | 'spanish' | 'german';
   speakingStyle: 'Warm & Natural' | 'Direct & Crisp' | 'Humorous & Casual' | 'Mentorship Tone';
   speed: number;

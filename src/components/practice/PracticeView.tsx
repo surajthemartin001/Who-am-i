@@ -57,6 +57,36 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
     questions: QuestionItem[];
   } | null>(null);
 
+  const [practiceNotice, setPracticeNotice] = useState<string | null>(null);
+
+  const handleStartDrill = (topic: string) => {
+    const matching = questions.filter(
+      (q) => q.topic.toLowerCase().includes(topic.toLowerCase()) || topic.toLowerCase().includes(q.topic.toLowerCase())
+    );
+    const drillQuestions = matching.length > 0 ? matching : questions.slice(0, 10);
+
+    setActiveRunningPack({
+      pack: {
+        id: `drill-${Date.now()}`,
+        title: `15-Min Active Recall Drill: ${topic}`,
+        description: `Rapid recall session for ${topic}`,
+        field: 'Targeted Review',
+        topics: [topic],
+        questionCount: drillQuestions.length,
+        questionIds: drillQuestions.map((q) => q.id),
+        difficulty: 'Hard',
+        sourceMix: 'mixed',
+        mode: 'revision',
+        timeLimitMinutes: 15,
+        createdAt: new Date().toISOString(),
+        completedAttempts: 0,
+      },
+      questions: drillQuestions,
+    });
+    setPracticeNotice(`15-minute active recall drill initialized for ${topic}!`);
+    setTimeout(() => setPracticeNotice(null), 3500);
+  };
+
   // Reusable Question Packs
   const [savedPacks, setSavedPacks] = useState<QuestionPack[]>(() => {
     const fromStorage = getSavedQuestionPacks();
@@ -251,6 +281,23 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Practice Notification Banner */}
+      {practiceNotice && (
+        <div className="p-3.5 rounded-2xl bg-indigo-950/80 border border-indigo-500/40 text-indigo-200 text-xs flex items-center justify-between shadow-lg animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <Sparkles size={15} className="text-amber-300" />
+            <span>{practiceNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPracticeNotice(null)}
+            className="text-slate-400 hover:text-white text-xs font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Daily Volume Target Indicator */}
       <div className="p-4 rounded-3xl bg-slate-950 border border-slate-800 flex flex-wrap items-center justify-between gap-4">
@@ -473,7 +520,7 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
                   <div className="pt-2 border-t border-slate-900 flex items-center justify-between text-[10px] text-slate-500">
                     <span>Last revised: {rev.lastRevisedDate}</span>
                     <button
-                      onClick={() => alert(`Starting 15-minute active recall drill for: ${rev.topic}`)}
+                      onClick={() => handleStartDrill(rev.topic)}
                       className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium"
                     >
                       Start Drill

@@ -55,6 +55,7 @@ export const AuthOnboardingModal: React.FC<AuthOnboardingModalProps> = ({
   const [weeklyHours, setWeeklyHours] = useState(28);
   const [preferredStudyTimes, setPreferredStudyTimes] = useState('Morning (07:00 - 09:30) & Evening (19:30 - 21:00)');
   const [desiredIntensity, setDesiredIntensity] = useState<IntensityMode>('RABBIT');
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Interests
   const [selectedInterests, setSelectedInterests] = useState<string[]>([
@@ -168,6 +169,7 @@ export const AuthOnboardingModal: React.FC<AuthOnboardingModalProps> = ({
   // Verify OTP
   const handleVerifyOtp = () => {
     if (otpInput.trim() === generatedOtp || otpInput.trim() === '123456') {
+      setFormError(null);
       // Check if account with contactInput exists
       const existing = existingAccounts.find((a) => a.email === contactInput || a.profile.email === contactInput);
       if (existing) {
@@ -179,7 +181,7 @@ export const AuthOnboardingModal: React.FC<AuthOnboardingModalProps> = ({
         setViewMode('onboard');
       }
     } else {
-      alert('Invalid OTP code. Please use the simulated code shown on screen.');
+      setFormError('Invalid OTP code. Please use the simulated code shown on screen.');
     }
   };
 
@@ -285,9 +287,10 @@ export const AuthOnboardingModal: React.FC<AuthOnboardingModalProps> = ({
   // Finalize Onboarding and Create Account
   const handleCompleteOnboarding = () => {
     if (!fullName.trim()) {
-      alert('Please provide your full name.');
+      setFormError('Please provide your full name before initializing your success track.');
       return;
     }
+    setFormError(null);
 
     const created = createNewAccount({
       name: fullName.trim(),
@@ -934,12 +937,29 @@ export const AuthOnboardingModal: React.FC<AuthOnboardingModalProps> = ({
               </div>
             )}
 
+            {/* Error Notification Banner */}
+            {formError && (
+              <div className="p-3 rounded-2xl bg-rose-950/80 border border-rose-500/40 text-rose-200 text-xs flex items-center justify-between animate-in fade-in">
+                <span>{formError}</span>
+                <button
+                  type="button"
+                  onClick={() => setFormError(null)}
+                  className="text-rose-400 hover:text-white font-bold ml-2"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
             {/* Step Navigation Controls */}
             <div className="flex items-center justify-between pt-3 border-t border-slate-900">
               {onboardStep > 1 ? (
                 <button
                   type="button"
-                  onClick={() => setOnboardStep(onboardStep - 1)}
+                  onClick={() => {
+                    setFormError(null);
+                    setOnboardStep(onboardStep - 1);
+                  }}
                   className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs text-slate-300 flex items-center gap-1.5"
                 >
                   <ArrowLeft size={13} /> Back
@@ -947,7 +967,10 @@ export const AuthOnboardingModal: React.FC<AuthOnboardingModalProps> = ({
               ) : (
                 <button
                   type="button"
-                  onClick={() => setViewMode('login')}
+                  onClick={() => {
+                    setFormError(null);
+                    setViewMode('login');
+                  }}
                   className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs text-slate-400"
                 >
                   ← Back to Login
@@ -959,9 +982,10 @@ export const AuthOnboardingModal: React.FC<AuthOnboardingModalProps> = ({
                   type="button"
                   onClick={() => {
                     if (onboardStep === 1 && !fullName.trim()) {
-                      alert('Please provide your name.');
+                      setFormError('Please enter your full name before continuing.');
                       return;
                     }
+                    setFormError(null);
                     setOnboardStep(onboardStep + 1);
                   }}
                   className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg transition-all"

@@ -91,7 +91,93 @@ When the user asks what to study, refer to their real plan. When they ask why th
   }
 }
 
-// Text-to-Speech Engine
+// Shared Web Audio Context and Sub-harmonic Dual Generator for Voice Depth & Warmth
+let voiceAudioCtx: AudioContext | null = null;
+let currentActiveAudioEl: HTMLAudioElement | null = null;
+let subHarmonicOsc1: OscillatorNode | null = null;
+let subHarmonicOsc2: OscillatorNode | null = null;
+let subHarmonicGain: GainNode | null = null;
+let subHarmonicFilter: BiquadFilterNode | null = null;
+
+function getVoiceAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
+  if (!voiceAudioCtx) {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioCtx) {
+      voiceAudioCtx = new AudioCtx({ latencyHint: 'interactive' });
+    }
+  }
+  if (voiceAudioCtx && voiceAudioCtx.state === 'suspended') {
+    voiceAudioCtx.resume().catch(() => {});
+  }
+  return voiceAudioCtx;
+}
+
+// Start a subtle, deep acoustic dual-layer resonance tone to give voice depth (गहराई व पुरुष-महिला ब्लेंड)
+function startHarmonicDepthAura(): void {
+  try {
+    const ctx = getVoiceAudioContext();
+    if (!ctx) return;
+    stopHarmonicDepthAura();
+
+    // 1. Fundamental chest resonator: 118Hz (warm masculine chest tone)
+    const osc1 = ctx.createOscillator();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(118, ctx.currentTime);
+
+    // 2. Harmonic body resonator: 236Hz (warmth overtone)
+    const osc2 = ctx.createOscillator();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(236, ctx.currentTime);
+
+    // Low-pass filter to keep sound buttery smooth without hum
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(340, ctx.currentTime);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.038, ctx.currentTime + 0.12);
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc1.start();
+    osc2.start();
+
+    subHarmonicOsc1 = osc1;
+    subHarmonicOsc2 = osc2;
+    subHarmonicFilter = filter;
+    subHarmonicGain = gain;
+  } catch {}
+}
+
+function stopHarmonicDepthAura(): void {
+  try {
+    if (subHarmonicOsc1) {
+      subHarmonicOsc1.stop();
+      subHarmonicOsc1.disconnect();
+      subHarmonicOsc1 = null;
+    }
+    if (subHarmonicOsc2) {
+      subHarmonicOsc2.stop();
+      subHarmonicOsc2.disconnect();
+      subHarmonicOsc2 = null;
+    }
+    if (subHarmonicFilter) {
+      subHarmonicFilter.disconnect();
+      subHarmonicFilter = null;
+    }
+    if (subHarmonicGain) {
+      subHarmonicGain.disconnect();
+      subHarmonicGain = null;
+    }
+  } catch {}
+}
+
+// Text-to-Speech Engine with Male + Female Harmonic Hybrid blend, joyful tone, deep clarity & normal speed
 export async function speakLyraSpeech(
   text: string,
   settings: LyraSettings,
@@ -101,7 +187,7 @@ export async function speakLyraSpeech(
 ): Promise<void> {
   if (!text || typeof window === 'undefined') return;
 
-  // Clean any markdown or symbols for speech
+  // Clean markdown, symbols, and links for natural diction
   const speechText = text
     .replace(/[*_#`~[\]]/g, '')
     .replace(/https?:\/\/\S+/g, '')
@@ -109,113 +195,147 @@ export async function speakLyraSpeech(
 
   if (!speechText) return;
 
-  // If instant voice is preferred (e.g., Live Voice Call for lowest latency)
-  if (preferInstantVoice && 'speechSynthesis' in window) {
+  stopLyraSpeech();
+
+  const isHybrid = !settings.voice || settings.voice === 'HarmonicHybrid';
+  const effectiveSpeed = settings.speed ? Math.max(0.7, Math.min(1.4, settings.speed)) : 1.0;
+  const effectiveVolume = settings.volume !== undefined ? Math.max(0.1, Math.min(1.0, settings.volume)) : 1.0;
+
+  // 1. Try High-Definition Server TTS with Gemini 3.8 Flash Lite TTS if not forced to instant
+  if (!preferInstantVoice) {
+    try {
+      const res = await fetch('/api/lyra/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: speechText,
+          voice: isHybrid ? 'HarmonicHybrid' : settings.voice,
+          speed: effectiveSpeed,
+          externalProvider: settings.externalTTS?.connected ? settings.externalTTS : null,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.audioBase64) {
+          const mime = data.mimeType || 'audio/wav';
+          const audio = new Audio(`data:${mime};base64,${data.audioBase64}`);
+          currentActiveAudioEl = audio;
+
+          // Normal balanced speed: calibrated by user settings
+          audio.playbackRate = effectiveSpeed;
+          // Clear, loud volume
+          audio.volume = effectiveVolume;
+
+          audio.onplay = () => {
+            if (isHybrid) startHarmonicDepthAura();
+            if (onStart) onStart();
+          };
+          audio.onended = () => {
+            stopHarmonicDepthAura();
+            currentActiveAudioEl = null;
+            if (onEnd) onEnd();
+          };
+          audio.onerror = () => {
+            stopHarmonicDepthAura();
+            currentActiveAudioEl = null;
+            if (onEnd) onEnd();
+          };
+
+          await audio.play();
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Server TTS failed, activating Harmonic client synthesis:', err);
+    }
+  }
+
+  // 2. High-Fidelity Harmonic Client Web Speech Synthesis
+  if ('speechSynthesis' in window) {
     try {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(speechText);
-      utterance.rate = settings.speed || 1.05;
-      utterance.pitch = settings.pitch || 1.1; // Friendly higher fairy pitch
-      utterance.volume = settings.volume || 1.0;
+
+      // Normal, natural conversational speed (respecting settings)
+      utterance.rate = effectiveSpeed * 0.98;
+
+      // Pitch: 0.96 gives rich masculine chest depth while retaining joyful female brightness
+      utterance.pitch = isHybrid ? 0.96 : (settings.pitch || 1.0);
+
+      // Loud, clear volume
+      utterance.volume = effectiveVolume;
 
       const voices = window.speechSynthesis.getVoices();
-      if (settings.language === 'hindi') {
+      if (settings.language === 'hindi' || settings.language === 'hinglish') {
+        // Find best natural Hindi / Indian voice
         const hindiVoice = voices.find(
           (v) =>
             v.lang.startsWith('hi') ||
             v.name.toLowerCase().includes('hindi') ||
             v.name.toLowerCase().includes('swara') ||
-            v.name.toLowerCase().includes('madhur')
-        );
+            v.name.toLowerCase().includes('ravi') ||
+            v.name.toLowerCase().includes('madhur') ||
+            v.name.toLowerCase().includes('lekha') ||
+            v.name.toLowerCase().includes('kalpana')
+        ) || voices.find((v) => v.lang.includes('IN'));
+
         if (hindiVoice) utterance.voice = hindiVoice;
         utterance.lang = 'hi-IN';
       } else {
         const enVoice = voices.find(
           (v) =>
             v.lang.startsWith('en') &&
-            (v.name.toLowerCase().includes('female') ||
-              v.name.toLowerCase().includes('zira') ||
+            (v.name.toLowerCase().includes('natural') ||
+              v.name.toLowerCase().includes('guy') ||
+              v.name.toLowerCase().includes('george') ||
               v.name.toLowerCase().includes('samantha') ||
-              v.name.toLowerCase().includes('natural'))
+              v.name.toLowerCase().includes('david'))
         ) || voices.find((v) => v.lang.startsWith('en'));
+
         if (enVoice) utterance.voice = enVoice;
         utterance.lang = 'en-US';
       }
 
       utterance.onstart = () => {
+        if (isHybrid) startHarmonicDepthAura();
         if (onStart) onStart();
       };
       utterance.onend = () => {
+        stopHarmonicDepthAura();
         if (onEnd) onEnd();
       };
       utterance.onerror = () => {
+        stopHarmonicDepthAura();
         if (onEnd) onEnd();
       };
 
       window.speechSynthesis.speak(utterance);
       return;
     } catch (e) {
-      console.warn('Instant speech synthesis failed, trying server:', e);
-    }
-  }
-
-  // Try server-side TTS (Gemini 3.8 Flash Lite TTS or connected external provider)
-  try {
-    const res = await fetch('/api/lyra/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: speechText,
-        voice: settings.voice,
-        externalProvider: settings.externalTTS?.connected ? settings.externalTTS : null,
-      }),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      if (data.audioBase64) {
-        const mime = data.mimeType || 'audio/wav';
-        const audio = new Audio(`data:${mime};base64,${data.audioBase64}`);
-        audio.playbackRate = settings.speed || 1.0;
-        audio.volume = settings.volume || 1.0;
-        if (onStart) audio.onplay = onStart;
-        if (onEnd) audio.onended = onEnd;
-        await audio.play();
-        return;
-      }
-    }
-  } catch (err) {
-    console.warn('Server TTS failed, falling back to Web Speech API:', err);
-  }
-
-  // Web Speech API fallback
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(speechText);
-    utterance.rate = settings.speed || 1.0;
-    utterance.pitch = settings.pitch || 1.0;
-    utterance.volume = settings.volume || 1.0;
-
-    const voices = window.speechSynthesis.getVoices();
-    if (settings.language === 'hindi') {
-      const hindiVoice = voices.find((v) => v.lang.startsWith('hi') || v.name.toLowerCase().includes('hindi'));
-      if (hindiVoice) utterance.voice = hindiVoice;
-      utterance.lang = 'hi-IN';
-    } else {
-      const enVoice = voices.find((v) => v.lang.startsWith('en'));
-      if (enVoice) utterance.voice = enVoice;
-      utterance.lang = 'en-US';
-    }
-
-    if (onStart) utterance.onstart = onStart;
-    if (onEnd) utterance.onend = onEnd;
-    utterance.onerror = () => {
+      console.warn('Speech synthesis error:', e);
+      stopHarmonicDepthAura();
       if (onEnd) onEnd();
-    };
-
-    window.speechSynthesis.speak(utterance);
+    }
   } else {
     if (onEnd) onEnd();
+  }
+}
+
+// Stop all playing voices and depth auras
+export function stopLyraSpeech(): void {
+  stopHarmonicDepthAura();
+  if (currentActiveAudioEl) {
+    try {
+      currentActiveAudioEl.pause();
+      currentActiveAudioEl.currentTime = 0;
+    } catch {}
+    currentActiveAudioEl = null;
+  }
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch {}
   }
 }
 
@@ -257,13 +377,6 @@ export async function sendLyraAudioVoice(
           ? 'मैंने आपकी आवाज़ सुन ली है। आपका लक्ष्य प्रगति पर है!'
           : 'I hear you loud and clear. Let us continue making progress!',
     };
-  }
-}
-
-// Stop any speaking audio
-export function stopLyraSpeech(): void {
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
   }
 }
 

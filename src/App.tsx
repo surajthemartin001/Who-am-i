@@ -219,6 +219,12 @@ export default function App() {
   const [isRecoveryModalOpen, setIsRecoveryModalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [appToastNotice, setAppToastNotice] = useState<string | null>(null);
+
+  const showAppToast = (msg: string) => {
+    setAppToastNotice(msg);
+    setTimeout(() => setAppToastNotice(null), 4500);
+  };
 
   // Sync isolated user dataset whenever active account or key datasets change
   useEffect(() => {
@@ -328,7 +334,7 @@ export default function App() {
   };
 
   const handleRebalancePlan = () => {
-    alert('Plan rebalanced: Workload redistributed across Wednesday and Saturday buffers.');
+    showAppToast('Plan rebalanced: Workload redistributed across Wednesday and Saturday buffers.');
     setTrackMetrics((prev) => ({
       ...prev,
       missedWorkHours: 0,
@@ -1020,7 +1026,7 @@ export default function App() {
         onClose={() => setIsRecoveryModalOpen(false)}
         metrics={trackMetrics}
         onApplyOption={(opt) => {
-          alert(`Strategy "${opt}" activated. Telemetry re-centered.`);
+          showAppToast(`Strategy "${opt}" activated. Telemetry re-centered.`);
           setTrackMetrics((prev) => ({
             ...prev,
             recoveryHoursRequired: 0,
@@ -1047,6 +1053,21 @@ export default function App() {
         onOpenLyraSettings={() => setIsLyraSettingsOpen(true)}
         onOpenLiveVoice={() => setIsLiveVoiceOpen(true)}
       />
+
+      {/* Floating System Toast */}
+      {appToastNotice && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900/95 border border-indigo-500/50 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <Sparkles className="text-indigo-400 w-5 h-5 shrink-0 animate-pulse" />
+          <span className="text-xs sm:text-sm font-medium">{appToastNotice}</span>
+          <button
+            type="button"
+            onClick={() => setAppToastNotice(null)}
+            className="text-slate-400 hover:text-white ml-2 text-xs font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }

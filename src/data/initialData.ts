@@ -649,15 +649,15 @@ export const initialRevisions: RevisionItem[] = [
 
 // LYRA DEFAULT SETTINGS: HINDI DEFAULT AS REQUIRED!
 export const initialLyraSettings: LyraSettings = {
-  mood: 'Calm',
+  mood: 'Happy', // Cheerful, joyful, encouraging mood
   personality: 'Warm & Encouraging',
-  voice: 'Kore',
+  voice: 'HarmonicHybrid', // Male + Female balanced harmonic blend
   language: 'hindi', // Default is Hindi as explicitly instructed!
   speakingStyle: 'Warm & Natural',
-  speed: 1.0,
-  pitch: 1.0,
-  volume: 0.95,
-  expressiveness: 'Natural',
+  speed: 1.0, // Normal, balanced speed: neither too fast nor too slow
+  pitch: 0.96, // Resonant, deep warmth
+  volume: 1.0, // Full clear presence and high clarity
+  expressiveness: 'High',
   autoSpeak: false,
   pushToTalk: false,
   externalTTS: {

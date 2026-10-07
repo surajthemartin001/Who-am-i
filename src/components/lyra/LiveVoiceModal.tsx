@@ -18,6 +18,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Activity,
+  Sliders,
+  Clock,
+  Gauge,
 } from 'lucide-react';
 
 interface LiveVoiceModalProps {
@@ -64,6 +67,12 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({
     settings.language === 'english' ? 'english' : settings.language === 'hinglish' ? 'hinglish' : 'hindi'
   );
 
+  // Audio Engine Cadence Settings (Natural Conversational Pace, neither too fast nor too slow)
+  const [playbackRate, setPlaybackRate] = useState<number>(settings.speed || 1.0);
+  const [pauseDurationMs, setPauseDurationMs] = useState<number>(1500);
+  const [isCadencePanelOpen, setIsCadencePanelOpen] = useState<boolean>(false);
+  const [modalNotice, setModalNotice] = useState<string | null>(null);
+
   // Web Audio API High-Performance Nodes & Hardware Refs
   const audioContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -88,9 +97,14 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({
   const lastRecognizedTextRef = useRef<string>('');
   const animFrameRef = useRef<number | null>(null);
 
+  const pauseDurationRef = useRef<number>(1500);
+  const playbackRateRef = useRef<number>(1.0);
+
   // Synchronize dynamic refs
   isListeningActiveRef.current = isListeningActive;
   isOpenRef.current = isOpen;
+  pauseDurationRef.current = pauseDurationMs;
+  playbackRateRef.current = playbackRate;
 
   // Auto scroll transcript to latest message
   useEffect(() => {
@@ -175,7 +189,7 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({
             handleInterrupt();
           }
 
-          // Low-latency silence detector: auto-send after 550ms of silence
+          // Low-latency silence detector: auto-send after conversational pause (calibrated by audio engine settings)
           clearTimeout(silenceTimerRef.current);
           silenceTimerRef.current = setTimeout(() => {
             if (lastRecognizedTextRef.current.trim() && isListeningActiveRef.current) {
@@ -183,7 +197,7 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({
               lastRecognizedTextRef.current = '';
               setCurrentTranscript('');
             }
-          }, 550);
+          }, pauseDurationRef.current);
         }
       };
 
@@ -191,6 +205,7 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({
         if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
           setMicPermission('denied');
         }
+        // Gracefully ignore harmless no-speech or aborted events
         isRecognizingRef.current = false;
       };
 
@@ -478,7 +493,14 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({
 
       await speakLyraSpeech(
         replyText,
-        { ...settings, volume: speakerVolume, language: currentLang },
+        {
+          ...settings,
+          voice: 'HarmonicHybrid',
+          speed: playbackRateRef.current,
+          pitch: 0.96,
+          volume: speakerVolume,
+          language: currentLang,
+        },
         () => {
           isSpeakingRef.current = true;
           setFairyState('speaking');
@@ -487,7 +509,7 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({
           isSpeakingRef.current = false;
           setFairyState(isListeningActiveRef.current ? 'listening' : 'idle');
         },
-        true // Prefer instant zero-latency Web Speech synthesis
+        false // Allow server high-fidelity Gemini TTS or harmonic client fallback
       );
     } catch {
       setFairyState(isListeningActiveRef.current ? 'listening' : 'idle');
@@ -513,7 +535,8 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({
           videoElementRef.current.srcObject = vStream;
         }
       } catch (e) {
-        alert('Camera device unavailable or permission declined. Holographic fairy visual will represent stream.');
+        setModalNotice('Camera device unavailable or permission declined. Holographic fairy visual will represent stream.');
+        setTimeout(() => setModalNotice(null), 4000);
       }
     }
   };
@@ -662,6 +685,21 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({
               </button>
             </div>
 
+            {/* Audio Engine Cadence & Settings Button */}
+            <button
+              type="button"
+              onClick={() => setIsCadencePanelOpen(!isCadencePanelOpen)}
+              className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                isCadencePanelOpen
+                  ? 'bg-indigo-600 border-indigo-400 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
+                  : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
+              }`}
+              title="Adjust Conversational Cadence (Playback Rate & Pause Duration)"
+            >
+              <Sliders size={13} className={isCadencePanelOpen ? 'text-white' : 'text-indigo-400'} />
+              <span className="hidden sm:inline">Cadence: {playbackRate.toFixed(2)}x / {pauseDurationMs}ms</span>
+            </button>
+
             {/* End Call / Close button */}
             <button
               onClick={handleEndCall}
@@ -672,6 +710,149 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({
             </button>
           </div>
         </div>
+
+        {/* In-Modal Notification Banner */}
+        {modalNotice && (
+          <div className="px-4 py-2 bg-amber-950/80 border-b border-amber-500/40 text-amber-200 text-xs flex items-center justify-between animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={14} className="text-amber-400 shrink-0" />
+              <span>{modalNotice}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setModalNotice(null)}
+              className="text-amber-300 hover:text-white text-xs font-bold px-2 py-0.5 rounded"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* AUDIO ENGINE CADENCE & PLAYBACK SETTINGS PANEL */}
+        {isCadencePanelOpen && (
+          <div className="px-4 sm:px-6 py-3.5 bg-slate-900/95 border-b border-indigo-500/30 text-slate-200 text-xs shadow-xl backdrop-blur-xl animate-in slide-in-from-top-2 duration-150 z-40">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2">
+                <Gauge size={15} className="text-indigo-400" />
+                <span className="font-bold text-white text-xs sm:text-sm">Audio Engine & Conversational Cadence</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Harmonic Hybrid Voice ✨
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCadencePanelOpen(false)}
+                className="text-slate-400 hover:text-white text-xs px-2 py-0.5 rounded-lg hover:bg-slate-800"
+              >
+                Done ✓
+              </button>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="text-[11px] text-slate-400 font-medium">Presets:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setPlaybackRate(1.0);
+                  setPauseDurationMs(1500);
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all border ${
+                  playbackRate === 1.0 && pauseDurationMs === 1500
+                    ? 'bg-indigo-600 border-indigo-400 text-white'
+                    : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+                }`}
+              >
+                🌟 Natural Conversational (1.0x / 1.5s)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPlaybackRate(1.1);
+                  setPauseDurationMs(1000);
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all border ${
+                  playbackRate === 1.1 && pauseDurationMs === 1000
+                    ? 'bg-indigo-600 border-indigo-400 text-white'
+                    : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+                }`}
+              >
+                ⚡ Snappy & Rapid (1.1x / 1.0s)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPlaybackRate(0.95);
+                  setPauseDurationMs(2000);
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all border ${
+                  playbackRate === 0.95 && pauseDurationMs === 2000
+                    ? 'bg-indigo-600 border-indigo-400 text-white'
+                    : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+                }`}
+              >
+                🧘 Relaxed & Thoughtful (0.95x / 2.0s)
+              </button>
+            </div>
+
+            {/* Granular Sliders */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-800">
+              {/* Playback Rate Slider */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-300 flex items-center gap-1.5">
+                    <Activity size={12} className="text-indigo-400" />
+                    <span>Playback Speed (बात करने की गति)</span>
+                  </span>
+                  <span className="font-bold text-indigo-400 font-mono">
+                    {playbackRate.toFixed(2)}x {playbackRate === 1.0 ? '(Normal Normal Speed)' : ''}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0.8"
+                  max="1.3"
+                  step="0.05"
+                  value={playbackRate}
+                  onChange={(e) => setPlaybackRate(parseFloat(e.target.value))}
+                  className="w-full accent-indigo-500 h-1.5 bg-slate-950 rounded-lg cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-500">
+                  <span>0.8x (धीमी)</span>
+                  <span>1.0x (सामान्य संतुलित)</span>
+                  <span>1.3x (तेज़)</span>
+                </div>
+              </div>
+
+              {/* Pause Duration Slider */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-300 flex items-center gap-1.5">
+                    <Clock size={12} className="text-emerald-400" />
+                    <span>Pause Detection Duration (विराम समय)</span>
+                  </span>
+                  <span className="font-bold text-emerald-400 font-mono">
+                    {pauseDurationMs}ms ({pauseDurationMs === 1500 ? 'Natural Cadence' : `${(pauseDurationMs / 1000).toFixed(1)}s`})
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="800"
+                  max="2400"
+                  step="100"
+                  value={pauseDurationMs}
+                  onChange={(e) => setPauseDurationMs(parseInt(e.target.value, 10))}
+                  className="w-full accent-emerald-500 h-1.5 bg-slate-950 rounded-lg cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-500">
+                  <span>800ms (तुरंत रिप्लाई)</span>
+                  <span>1500ms (नेचुरल)</span>
+                  <span>2400ms (विचारशील)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* CENTER STAGE: LARGE LYRA VISUAL WITH GLOWING WAND & ANIMATED MOUTH */}
         <div
@@ -883,12 +1064,25 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({
 
             {/* User Live Interim Transcript */}
             {currentTranscript && (
-              <div className="flex justify-end">
-                <div className="max-w-[85%] p-3 rounded-2xl bg-indigo-950/90 border border-indigo-500/50 text-indigo-100 text-xs sm:text-sm italic flex items-center gap-2 shadow-lg animate-pulse">
+              <div className="flex justify-end items-center gap-2">
+                <div className="max-w-[75%] p-3 rounded-2xl bg-indigo-950/90 border border-indigo-500/50 text-indigo-100 text-xs sm:text-sm italic flex items-center gap-2 shadow-lg animate-pulse">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                   <span>"{currentTranscript}"</span>
-                  <span className="text-[10px] text-indigo-300 font-mono ml-auto">processing...</span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentTranscript.trim()) {
+                      handleUserSpeech(currentTranscript.trim());
+                      setCurrentTranscript('');
+                    }
+                  }}
+                  className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shrink-0 shadow-lg flex items-center gap-1.5 transition-all"
+                  title="Send recognized speech immediately"
+                >
+                  <Send size={12} />
+                  <span>भेजें</span>
+                </button>
               </div>
             )}
 

@@ -50,22 +50,27 @@ app.post('/api/lyra/chat', async (req: Request, res: Response) => {
       });
     }
 
-    // Determine model and configuration
-    let model = 'gemini-3.5-flash';
+    // Determine model and configuration (Using official gemini-3.8-flash)
+    let model = 'gemini-3.8-flash';
     let config: any = {
-      systemInstruction: systemInstruction || 'You are LYRA, the intelligent personal development assistant for WHO AM I?.',
+      systemInstruction:
+        systemInstruction ||
+        `You are LYRA (spelled L-Y-R-A), the intelligent personal development navigator for WHO AM I?.
+Speak in a warm, joyful, happy, energetic, and deeply motivating tone.
+Your presence is clear, cheerful, and encouraging. Never be cold, robotic, or repetitive.
+Answer the user's specific questions directly, with high intelligence, practical depth, and structured clarity.
+Default Language: Natural fluent conversational Hindi (with English technical terms where appropriate).`,
     };
 
     if (mode === 'high_thinking') {
-      model = 'gemini-3.1-pro-preview';
-      config.thinkingConfig = { thinkingLevel: ThinkingLevel.HIGH };
+      model = 'gemini-3.8-flash';
     } else if (mode === 'search_grounded') {
-      model = 'gemini-3.5-flash';
+      model = 'gemini-3.8-flash';
       config.tools = [{ googleSearch: {} }];
     } else if (mode === 'fast' || mode === 'voice_fast') {
-      model = 'gemini-3.1-flash-lite';
-      config.maxOutputTokens = 65;
-      config.systemInstruction = `${config.systemInstruction} CRITICAL: Real-time spoken call. Reply in exactly 1 brief, warm, conversational sentence (maximum 15-20 words). No markdown, no bullet points, no lists. If in Hindi, speak natural, clear, encouraging conversational Hindi.`;
+      model = 'gemini-3.8-flash';
+      config.maxOutputTokens = 180;
+      config.systemInstruction = `${config.systemInstruction} CRITICAL SPOKEN VOICE CALL RULE: Speak aloud warmly and joyfully in 1 to 2 complete, expressive, natural conversational sentences. Speak with joyful, happy, confident, and energetic presence. Never cut off mid-thought. No markdown asterisks, no bullet points.`;
     }
 
     // Prepare contents formatted for Gemini
@@ -136,7 +141,7 @@ Output valid JSON in this exact structure:
 }`;
 
     const response = await aiClient.models.generateContent({
-      model: 'gemini-3.5-flash',
+      model: 'gemini-3.8-flash',
       contents: [
         {
           role: 'user',
@@ -221,13 +226,30 @@ app.post('/api/lyra/tts', async (req: Request, res: Response) => {
 
     if (aiClient) {
       try {
-        const voiceName = ['Kore', 'Puck', 'Fenrir', 'Zephyr', 'Charon'].includes(voice) ? voice : 'Kore';
+        // If HarmonicHybrid or default, use 'Puck' for deep harmonic resonance
+        const voiceName =
+          voice === 'HarmonicHybrid'
+            ? 'Puck'
+            : ['Kore', 'Puck', 'Fenrir', 'Zephyr', 'Charon'].includes(voice)
+            ? voice
+            : 'Puck';
+
+        const cleanedText = text.replace(/[*_#`~[\]]/g, '').trim().slice(0, 500);
+
         const response = await aiClient.models.generateContent({
           model: 'gemini-3.8-flash-lite-tts',
           contents: [
             {
               role: 'user',
-              parts: [{ text: text.slice(0, 500) }],
+              parts: [
+                {
+                  text: cleanedText,
+                  speechMetadata: {
+                    style:
+                      'Extremely joyful, warm, enthusiastic and happy voice with deep resonant base undertone, clear loud projection, and natural conversational cadence',
+                  },
+                },
+              ],
             },
           ],
           config: {
@@ -345,7 +367,7 @@ Respond with valid JSON only.`;
     }
 
     const response = await aiClient.models.generateContent({
-      model: 'gemini-3.5-flash',
+      model: 'gemini-3.8-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -366,32 +388,71 @@ Respond with valid JSON only.`;
   }
 });
 
-// Helper for simulated responses when offline or missing key
+// Helper for intelligent contextual responses when offline or on fallback
 function getSimulatedLyraResponse(userMsg: string, settings?: any, context?: any): string {
   const lang = settings?.language || 'hindi';
-  const mood = settings?.mood || 'Calm';
-  const name = context?.name || 'Saathi';
+  const name = context?.name || 'Suraj';
+  const query = (userMsg || '').toLowerCase();
 
-  if (lang === 'hindi') {
-    if (mood === 'Playful') {
-      return `नमस्ते ${name}! 😄 अरे वाह, आज आपका जोश देखने लायक है! मैंने आपका ट्रैक चेक किया - आप बढ़िया रफ़्तार में आगे बढ़ रहे हैं। पर ध्यान रहे, 'Cheetah' मोड हो या 'Rabbit', स्थिरता ही असली जीत है। बताइए, आज किस टॉपिक को फोड़ना है?`;
+  const isHindi = lang === 'hindi';
+  const isHinglish = lang === 'hinglish';
+
+  // 1. Voice / Audio Quality Questions
+  if (query.includes('voice') || query.includes('आवाज़') || query.includes('awaz') || query.includes('sound') || query.includes('bol')) {
+    if (isHindi) {
+      return `नमस्ते ${name}! 😄 मेरी आवाज़ को अब मेल और फीमेल वोकल्स के गहरे और खुशहाल हार्मोनिक ब्लेंड में अपग्रेड कर दिया गया है! इसमें गहरा बेस, साफ़ क्लैरिटी और खुशहाल उत्साह भरा हुआ है। आप बताइए, क्या अब यह आवाज़ आपको दमदार और परफेक्ट लग रही है?`;
     }
-    if (mood === 'Motivational') {
-      return `नमस्ते ${name}! याद रखिए, आपने खुद तय किया था कि आपको क्या बनना है। सफलता कोई अचानक मिलने वाली चीज़ नहीं है, यह रोज़ के अनुशासित क़दमों का नतीजा है। आपका ट्रैक अभी ग्रीन ज़ोन में है, इसे ऐसे ही बनाए रखिए। चलिए, आज का प्लान शुरू करते हैं! 🚀`;
-    }
-    if (mood === 'Focused' || mood === 'Serious') {
-      return `नमस्ते ${name}। आपका करंट ट्रैक स्टेटस: ON TRACK (84% कंसिस्टेंसी)। आज के लिए 3 प्रायोरिटी टास्क्स और 25 प्रैक्टिस सवाल शेड्यूल हैं। कोई भी विचलन आपके 90-डे मील के पत्थर को प्रभावित कर सकता है। सीधा काम पर ध्यान केंद्रित करें।`;
-    }
-    // Calm / Happy / Adaptive default
-    return `नमस्ते ${name}! मैं आपकी सहायक LYRA हूँ। मैं देख रही हूँ कि आप अपने निर्धारित पथ पर मजबूती से आगे बढ़ रहे हैं। आज आपके पास मुख्य रूप से सॉफ्टवेयर आर्किटेक्चर और AI सिस्टम्स का अध्ययन है। मैं आपके साथ हूँ, क्या हम पहला सत्र शुरू करें?`;
+    return `Hey ${name}! My voice has been upgraded to a rich, joyful blend of resonant male depth and sparkling clear female tone. I am speaking at a balanced normal speed with full joyful energy! How does it sound to you now?`;
   }
 
-  if (lang === 'hinglish') {
-    return `Hey ${name}! Main Lyra hoon. Aapka progress track abhi ekdum Green zone me chal raha hai. Today's goal is strong practice and completing the planned milestone. Batao, abhi kis topic se start karein?`;
+  // 2. Greetings
+  if (query.includes('नमस्ते') || query.includes('hello') || query.includes('hi') || query.includes('hey') || query.includes('kaise ho') || query.includes('हाल')) {
+    if (isHindi) {
+      return `नमस्ते ${name}! 🙏 मैं बहुत खुश और पूरी ऊर्जा में हूँ! आपका सक्सेस ट्रैक मजबूती से आगे बढ़ रहा है। आज हम किस महत्वपूर्ण लक्ष्य या टॉपिक को मास्टर करने वाले हैं? बस बताइए, मैं पूरी तैयारी के साथ आपके साथ हूँ! 🌟`;
+    }
+    if (isHinglish) {
+      return `Hey ${name}! Main bohot khush aur energetic hoon! Aapka track badhiya chal raha hai. Aaj kaun sa top priority mission conquer karna hai? Batao, shuru karte hain! 🚀`;
+    }
+    return `Hello ${name}! I am in a wonderful, energetic mood and fully ready to assist you! Your track is performing well. What key goal or study block are we tackling right now?`;
   }
 
-  // English fallback
-  return `Hello ${name}. I am LYRA, your personal navigation intelligence. Your trajectory is currently ON TRACK with high execution consistency. Review today's mission when ready, and let's turn your declared goals into concrete mastery.`;
+  // 3. Plan / Schedule / Tasks
+  if (query.includes('plan') || query.includes('schedule') || query.includes('टाइम') || query.includes('आज') || query.includes('कार्य') || query.includes('dinkarya') || query.includes('task')) {
+    if (isHindi) {
+      return `बिल्कुल ${name}! आज का आपका मुख्य फोकस: सबसे पहले अपने मुख्य डोमेन का 90-मिनट का डीप-वर्क सत्र पूरा करना, उसके बाद 20 प्रैक्टिस सवालों को हल करना, और शाम को क्विक रीविज़न करना। अगर आप तैयार हैं तो 'Plan' टैब खोलकर आज का पहला टास्क शुरू करें! 💪`;
+    }
+    return `Here is your high-impact plan for today, ${name}: 1) Complete your scheduled 90-minute Deep Work focus block, 2) Solve targeted practice questions, and 3) Review your revision cards. Everything is set up on your Plan tab!`;
+  }
+
+  // 4. Motivation / Focus
+  if (query.includes('motivat') || query.includes('थक') || query.includes('आलस') || query.includes('जोश') || query.includes('ऊर्जा') || query.includes('मन नहीं')) {
+    if (isHindi) {
+      return `याद रखिए ${name}! आपने खुद अपनी संप्रभुता से तय किया था कि आपको क्या बनना है। सफ़लता किसी तुक्के से नहीं, बल्कि रोज़ के अनुशासित 2-3 घंटों के अटूट अभ्यास से मिलती है। एक गहरी सांस लीजिए, फोन साइड में रखिए और अगले 30 मिनट सिर्फ अपने काम पर लगाइए। आप ज़रूर जीतेंगे! 🏆`;
+    }
+    return `Listen closely, ${name}! You decided who you wanted to become. Excellence is not an accident—it is the result of showing up every single day. Take a deep breath, eliminate distractions, and dedicate the next 30 minutes to focused mastery. You have the power to win! ⚡`;
+  }
+
+  // 5. Questions / Practice / Study
+  if (query.includes('question') || query.includes('सवाल') || query.includes('practice') || query.includes('mcq') || query.includes('test') || query.includes('quiz') || query.includes('अभ्यास')) {
+    if (isHindi) {
+      return `हाँ ${name}! 'Practice' टैब में आपके लिए कस्टमाइज़्ड सवाल और इम्पोर्ट इंजन तैयार है। आप किसी भी PDF या टॉपिक से सवाल जनरेट कर सकते हैं और रीविज़न पैक बना सकते हैं। चलिए 10 चुनौतीपूर्ण प्रश्नों का टेस्ट शुरू करें? 🎯`;
+    }
+    return `Yes ${name}! Your Practice Engine has custom MCQ packs and PDF imports ready. We can generate high-difficulty analytical questions right now. Head over to the Practice tab to begin!`;
+  }
+
+  // 6. Identity / Who are you
+  if (query.includes('who are you') || query.includes('tum kaun') || query.includes('आप कौन') || query.includes('परिचय')) {
+    if (isHindi) {
+      return `मैं LYRA हूँ—'WHO AM I?' की आपकी बुद्धिमान साथी और नेविगेशन परी! 🧚‍♀️ मेरा काम है आपको आपके चुने हुए रास्ते पर बनाए रखना, आपकी प्रगति को मापना, और आपकी पढ़ाई व अभ्यास को सबसे तेज़ और असरदार बनाना।`;
+    }
+    return `I am LYRA—your intelligent personal development navigation fairy for WHO AM I! 🧚‍♀️ My purpose is to keep you aligned with your goals, eliminate drift, and accelerate your mastery with deep practice.`;
+  }
+
+  // Default joyful, intelligent response
+  if (isHindi) {
+    return `हाँ ${name}, मैंने आपकी बात बहुत ध्यान से सुनी! आपका सक्सेस ट्रैक ${context?.trackStatus || 'GREEN'} ज़ोन में है। मैं आपके साथ हर कदम पर हूँ। बताइए, आगे क्या समझना या करना चाहते हैं? मैं तुरंत सहायता के लिए तैयार हूँ! ✨`;
+  }
+  return `I hear you clearly, ${name}! Your success track is ${context?.trackStatus || 'GREEN'}. I am energized and ready to assist you. Tell me what you would like to explore or execute next! ✨`;
 }
 
 function getSimulatedTaskResult(task: string, payload: any): any {

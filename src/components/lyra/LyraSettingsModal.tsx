@@ -369,11 +369,11 @@ export const LyraSettingsModal: React.FC<LyraSettingsModalProps> = ({
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {[
-                    { id: 'Kore', label: 'Kore', desc: 'Warm, balanced female' },
-                    { id: 'Puck', label: 'Puck', desc: 'Energetic & bright' },
-                    { id: 'Zephyr', label: 'Zephyr', desc: 'Calm & centered' },
-                    { id: 'Fenrir', label: 'Fenrir', desc: 'Authoritative deep tone' },
-                    { id: 'Charon', label: 'Charon', desc: 'Crisp & technical' },
+                    { id: 'HarmonicHybrid', label: 'Harmonic Hybrid ✨', desc: 'मेल + फीमेल ब्लेंड, गहरा व खुशहाल' },
+                    { id: 'Puck', label: 'Puck (गहरा व स्पष्ट)', desc: 'Resonant androgynous' },
+                    { id: 'Kore', label: 'Kore (उत्साही)', desc: 'Warm, joyful bright tone' },
+                    { id: 'Fenrir', label: 'Fenrir (गंभीर)', desc: 'Authoritative deep tone' },
+                    { id: 'Zephyr', label: 'Zephyr (शांत)', desc: 'Calm & centered' },
                     { id: 'BrowserDefault', label: 'Device Engine', desc: 'System synthesis' },
                   ].map((v) => {
                     const isSelected = localSettings.voice === v.id;
