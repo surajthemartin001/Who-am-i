@@ -50,12 +50,22 @@ export const IntensityModeCard: React.FC<IntensityModeCardProps> = ({
       passReq: number;
     }
   > = {
-    TURTLE: {
-      title: 'MODE 1 — TURTLE',
-      subtitle: 'Slow & Sustainable',
+    TORTOISE: {
+      title: 'MODE 1 — TORTOISE',
+      subtitle: 'Sustainable Foundation',
       icon: '🐢',
-      hours: '1.5 - 2.5 hours / day',
-      desc: 'Designed for lower daily availability, sustainable progression, generous recovery buffers, and reduced cognitive load.',
+      hours: '2–4 hours/day',
+      desc: 'Designed for lower daily availability, sustainable progression, generous recovery buffers, and reduced cognitive load without sacrificing quality.',
+      color: 'border-emerald-500/50 bg-emerald-950/20 text-emerald-300',
+      accent: 'emerald',
+      passReq: 70,
+    },
+    TURTLE: {
+      title: 'MODE 1 — TORTOISE',
+      subtitle: 'Sustainable Foundation',
+      icon: '🐢',
+      hours: '2–4 hours/day',
+      desc: 'Designed for lower daily availability, sustainable progression, generous recovery buffers, and reduced cognitive load without sacrificing quality.',
       color: 'border-emerald-500/50 bg-emerald-950/20 text-emerald-300',
       accent: 'emerald',
       passReq: 70,
@@ -64,8 +74,8 @@ export const IntensityModeCard: React.FC<IntensityModeCardProps> = ({
       title: 'MODE 2 — RABBIT',
       subtitle: 'Balanced High-Performance',
       icon: '🐇',
-      hours: '3.5 - 5.0 hours / day',
-      desc: 'Designed for serious learners with consistent daily discipline, moderate-to-high velocity, balanced theory, and active practice.',
+      hours: '8–10 hours/day',
+      desc: 'Designed for serious learners with dedicated daily availability, balanced deep-work theory, active practice, and rapid progress.',
       color: 'border-indigo-500/60 bg-indigo-950/25 text-indigo-300',
       accent: 'indigo',
       passReq: 75,
@@ -74,8 +84,8 @@ export const IntensityModeCard: React.FC<IntensityModeCardProps> = ({
       title: 'MODE 3 — CHEETAH',
       subtitle: 'Extreme Intensive Acceleration',
       icon: '🐆',
-      hours: '6.0 - 8.5 hours / day',
-      desc: 'Designed for maximum available time, aggressive milestone pacing, high practice volume, and accelerated synthesis.',
+      hours: '14–16 hours/day',
+      desc: 'Intensive acceleration track for maximum available focus, compressed milestone pacing, high practice volume, and deep synthesis.',
       color: 'border-amber-500/60 bg-amber-950/25 text-amber-300',
       accent: 'amber',
       passReq: 80,
@@ -84,8 +94,8 @@ export const IntensityModeCard: React.FC<IntensityModeCardProps> = ({
       title: 'MODE 4 — TIGER',
       subtitle: 'Apex Elite Mastery & Immersion',
       icon: '🐅',
-      hours: '16.0 - 18.0 hours / day',
-      desc: 'Full-immersion sovereign deep-work protocol. 16–18 hours daily relentless execution, minimal latency, elite cognitive stamina, and near-zero distraction.',
+      hours: '16–18 hours/day',
+      desc: 'Full-immersion sovereign deep-work protocol. 16–18 hours daily relentless execution, near-zero distraction, elite cognitive stamina, and sovereign dedication.',
       color: 'border-rose-500/60 bg-rose-950/25 text-rose-300',
       accent: 'rose',
       passReq: 85,
@@ -231,6 +241,68 @@ export const IntensityModeCard: React.FC<IntensityModeCardProps> = ({
             </div>
           );
         })}
+      </div>
+
+      {/* WEEKLY MODE REVIEW (Evaluates completed work, missed work, consistency every 7 days) */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-indigo-950/30 border border-indigo-500/30 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400">
+              <Sparkles size={15} />
+            </span>
+            <div>
+              <div className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                <span>7-Day Adaptive Weekly Mode Review</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 font-mono">
+                  Weekly Evaluation Active
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5">
+                AI continuously evaluates completed work, actual study time, missed buffers, and workload consistency.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="font-semibold text-white flex items-center gap-1.5">
+              <span>Current Evaluation:</span>
+              <span className="text-emerald-400 font-bold">Consistent Performance on {currentMode}</span>
+            </div>
+            <div className="text-[11px] text-slate-400">
+              "Your scheduled work is being completed consistently. I recommend continuing with {currentMode} for another cycle, or stepping up if your daily availability increases."
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => onUpdateMode(currentMode, 7)}
+              className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm transition-all"
+            >
+              Keep {currentMode}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const nextMode: IntensityMode =
+                  currentMode === 'TORTOISE' || currentMode === 'TURTLE'
+                    ? 'RABBIT'
+                    : currentMode === 'RABBIT'
+                    ? 'CHEETAH'
+                    : 'TIGER';
+                onUpdateMode(nextMode, 7);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all"
+            >
+              Adapt Mode
+            </button>
+          </div>
+        </div>
+        <div className="text-[10px] text-slate-500 flex items-center gap-1">
+          <ShieldCheck size={12} className="text-indigo-400" />
+          <span>You remain in complete control of all final intensity mode decisions.</span>
+        </div>
       </div>
 
       {/* Flexible Lock Duration Selector & Immediate Unlock / Reassess Bar */}

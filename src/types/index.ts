@@ -1,4 +1,24 @@
-export type IntensityMode = 'TURTLE' | 'RABBIT' | 'CHEETAH' | 'TIGER';
+export type IntensityMode = 'TORTOISE' | 'TURTLE' | 'RABBIT' | 'CHEETAH' | 'TIGER';
+
+export type OnboardingState =
+  | 'ACCOUNT_CREATED'
+  | 'PROFILE_SETUP'
+  | 'GOALS_SETUP'
+  | 'TIME_SETUP'
+  | 'MODE_SETUP'
+  | 'RESOURCE_SETUP'
+  | 'DIAGNOSTIC_SETUP'
+  | 'AI_ANALYSIS'
+  | 'CONFIGURATION_BUILDING'
+  | 'REVIEW'
+  | 'CONFIRMED'
+  | 'DASHBOARD_READY';
+
+export type SourceProvenance =
+  | 'imported_from_source'
+  | 'ai_generated'
+  | 'ai_derived_from_source'
+  | 'user_created';
 
 export type TrackStatus = 'GREEN' | 'YELLOW' | 'RED';
 
@@ -131,6 +151,9 @@ export interface ResourceItem {
   status: 'analyzed' | 'in_progress' | 'completed';
   tags: string[];
   notes?: string;
+  provenance?: SourceProvenance;
+  fileSize?: string;
+  contentSnippet?: string;
 }
 
 export interface BookChapter {
@@ -194,6 +217,7 @@ export interface QuestionSourceMetadata {
   isFlaggedAmbiguous?: boolean;
   ambiguityReason?: string;
   originalSnippet?: string;
+  provenance?: SourceProvenance;
 }
 
 export interface QuestionItem {
@@ -210,6 +234,7 @@ export interface QuestionItem {
   subtopic?: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
   sourceMetadata?: QuestionSourceMetadata;
+  provenance?: SourceProvenance;
   isPyq?: boolean;
   pyqYear?: string;
   savedForRevision?: boolean;
@@ -220,6 +245,77 @@ export interface QuestionItem {
   whyOthersWrong?: string[];
   deeperConcept?: string;
   packId?: string;
+}
+
+export interface OnboardingAnswers {
+  // Profile
+  fullName: string;
+  displayName: string;
+  targetRole: string; // "What do you want to become?"
+  educationLevel: string;
+  currentStage: string;
+
+  // Goals
+  rawGoalInput: string;
+  goals: Goal[];
+
+  // Time & Availability
+  availableDailyHours: number;
+  availableWeeklyHours: number;
+  availableTimeWindows: string[];
+  hasFixedStudyHours: boolean;
+  fixedHoursDetails?: string;
+  existingCommitments?: string;
+  timeAnalysis?: {
+    totalAvailableHoursPerWeek: number;
+    recommendedPlannedHoursPerWeek: number;
+    bufferRecoveryHoursPerWeek: number;
+    sustainablePacingNotes: string;
+  };
+
+  // Intensity Mode
+  selectedIntensity: IntensityMode;
+  recommendedIntensity: IntensityMode;
+  weeklyReviewEnabled: boolean;
+
+  // Resources
+  uploadedResources: ResourceItem[];
+  skippedResourceStep: boolean;
+
+  // Diagnostic Assessment
+  diagnosticTargetField: string;
+  diagnosticAnswers: Record<string, string>;
+  diagnosticAssessment?: {
+    estimatedStartingLevel: string;
+    strongAreas: string[];
+    weakAreas: string[];
+    missingPrerequisites: string[];
+    learningPriorities: string[];
+    label: string;
+  };
+
+  // Preferences
+  preferredPracticeType: string;
+  preferredDifficulty: 'Beginner' | 'Intermediate' | 'Hard' | 'Extreme';
+  revisionFrequencyDays: 3 | 7 | 14;
+  planningStyle: string;
+
+  // AI & LYRA Management
+  trackMetricsPreference: string[];
+  lyraReminders: string[];
+  lyraAutonomousPermissions: string[];
+}
+
+export interface SetupConfiguration {
+  goals: Goal[];
+  dailyTasks: DailyPlanTask[];
+  weekPlan: WeekPlanDay[];
+  resources: ResourceItem[];
+  trackMetrics: TrackMetrics;
+  lockState: IntensityLockState;
+  questions: QuestionItem[];
+  revisions: RevisionItem[];
+  lyraContextSummary: string;
 }
 
 export interface QuestionPack {
@@ -274,7 +370,18 @@ export type LyraMood = 'Happy' | 'Playful' | 'Calm' | 'Focused' | 'Motivational'
 export type LyraState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'typing' | 'completed' | 'error';
 
 export interface LyraActionPayload {
-  type: 'navigate' | 'create_task' | 'set_reminder' | 'search_resources' | 'open_approved_url';
+  type:
+    | 'navigate'
+    | 'create_task'
+    | 'set_reminder'
+    | 'search_resources'
+    | 'open_approved_url'
+    | 'reconfigure_setup'
+    | 'upload_source'
+    | 'recommend_mode'
+    | 'reorganize_curriculum'
+    | 'filter_dashboard'
+    | 'update_goals';
   target?: string;
   data?: any;
   requiresConfirmation?: boolean;

@@ -1,6 +1,7 @@
 import { MCQAssessmentQuestion, AssessmentResult, IntensityMode, UserProfile, Goal } from '../types';
 
 export const PASSING_CRITERIA: Record<IntensityMode, number> = {
+  TORTOISE: 70,
   TURTLE: 70,
   RABBIT: 75,
   CHEETAH: 80,
